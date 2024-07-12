@@ -99,12 +99,12 @@ resource "aws_security_group" "mysg9" {
 
 # Create Instance
 resource "aws_instance" "instance9" {
-  ami                         = "ami-0c2af51e265bd5e0e"
+  ami                         = "ami-0c2af51e265bd5e0e"  # Replace with your desired AMI ID
   instance_type               = "t2.micro"
   associate_public_ip_address = true
   subnet_id                   = aws_subnet.mysubnet9.id
   vpc_security_group_ids      = [aws_security_group.mysg9.id]
-  key_name                    = "pihukey"
+  key_name                    = "pihukey"  # Replace with your existing key pair name
 
   tags = {
     Name = "Prod-Server"
@@ -113,7 +113,7 @@ resource "aws_instance" "instance9" {
 
 # Allocate Elastic IP
 resource "aws_eip" "lb" {
-  instance = aws_instance.web.id
-  domain   = "vpc"
+  instance = aws_instance.instance9.id  # Corrected instance reference
+  vpc      = true
 }
 
