@@ -4,7 +4,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 3.0"
+      version = ">= 4.0"
     }
   }
 }
@@ -99,7 +99,7 @@ resource "aws_security_group" "mysg9" {
 
 # Create Instance
 resource "aws_instance" "instance9" {
-  ami                         = "ami-0ad21ae1d0696ad58"
+  ami                         = "ami-0c2af51e265bd5e0e"
   instance_type               = "t2.micro"
   associate_public_ip_address = true
   subnet_id                   = aws_subnet.mysubnet9.id
@@ -107,24 +107,13 @@ resource "aws_instance" "instance9" {
   key_name                    = "pihukey"
 
   tags = {
-    Name = "SA-TF-DummyServer"
+    Name = "Prod-Server"
   }
 }
 
 # Allocate Elastic IP
-resource "aws_eip" "eip9" {
-  vpc = true
-
-  tags = {
-    Name = "myeip9"
-  }
+resource "aws_eip" "lb" {
+  instance = aws_instance.web.id
+  domain   = "vpc"
 }
 
-# Associate Elastic IP with Instance
-resource "aws_eip_association" "eip_assoc9" {
-  instance_id   = aws_instance.instance9.id
-  allocation_id = aws_eip.eip9.id
-}
-
-  }
-}
