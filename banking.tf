@@ -126,7 +126,7 @@ resource "aws_eip" "proj-eip" {
 
 # Creating an ubuntu EC2 instance
 resource "aws_instance" "Prod-Server" {
- ami = "ami-0ef82eeba2c7a0eeb"
+ ami = "ami-0c2af51e265bd5e0e"
  instance_type = "t2.micro"
  availability_zone = "ap-south-1b"
  key_name = "pihukey"
@@ -137,8 +137,7 @@ resource "aws_instance" "Prod-Server" {
  user_data  = <<-EOF
  #!/bin/bash
      sudo apt-get update -y
-     
- EOF
+    EOF
  tags = {
  Name = "Prod-Server"
  }
