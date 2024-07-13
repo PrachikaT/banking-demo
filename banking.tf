@@ -137,10 +137,7 @@ resource "aws_instance" "Prod-Server" {
  user_data  = <<-EOF
  #!/bin/bash
      sudo apt-get update -y
-     sudo apt install docker.io -y
-     sudo systemctl enable docker
-     sudo docker run -itd -p 8085:8081 vikuldocker/insurance-mentor:1
-     sudo docker start $(docker ps -aq)
+     
  EOF
  tags = {
  Name = "Prod-Server"
