@@ -1,80 +1,95 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 4.0"
-    }
-  }
-}
 provider "aws" {
-  region = "ap-south-1"
-}
-resource "aws_vpc" "proj-vpc" {
-  cidr_block = "10.0.0.0/16"
+  region     = "ap-south-1"
+  access_key = "AKIARBF4NB6XD6GGUNVF"
+  secret_key = "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"
 }
 
-resource "aws_internet_gateway" "proj-ig" {
-  vpc_id = aws_vpc.proj-vpc.id
+# Create AWS Instance
+
+resource "aws_instance" "instance1" {
+  ami           = "ami-0c2af51e265bd5e0e"
+  instance_type = "t2.micro"
+  key_name      = "pihukey"
+
   tags = {
-    Name = "gateway1"
+    Name = "Instance1"
   }
 }
 
-resource "aws_route_table" "proj-rt" {
-  vpc_id = aws_vpc.proj-vpc.id
+# Create VPC
+
+resource "aws_vpc" "myvpc9" {
+  cidr_block       = "10.0.0.0/16"
+  instance_tenancy = "default"
+
+  tags = {
+    Name = "myvpc9"
+  }
+}
+
+# Create Subnet in ap-south-1b
+
+resource "aws_subnet" "mysubnet9_b" {
+  vpc_id            = aws_vpc.myvpc9.id
+  cidr_block        = "10.0.2.0/24"
+  availability_zone = "ap-south-1b"
+
+  tags = {
+    Name = "mysubnet9_b"
+  }
+}
+
+# Internet Gateway
+
+resource "aws_internet_gateway" "mygw9" {
+  vpc_id = aws_vpc.myvpc9.id
+
+  tags = {
+    Name = "mygw9"
+  }
+}
+
+# Route Table
+
+resource "aws_route_table" "myrt9" {
+  vpc_id = aws_vpc.myvpc9.id
+
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.proj-ig.id
+    gateway_id = aws_internet_gateway.mygw9.id
   }
-  route {
-    ipv6_cidr_block = "::/0"
-    gateway_id = aws_internet_gateway.proj-ig.id
-  }
+
   tags = {
-    Name = "rt1"
+    Name = "myrt9"
   }
 }
 
-resource "aws_subnet" "proj-subnet" {
-  vpc_id = aws_vpc.proj-vpc.id
-  cidr_block = "10.0.1.0/24"
-  availability_zone = "ap-south-1b"
-  tags = {
-    Name = "subnet1"
-  }
+# Route Table Association
+
+resource "aws_route_table_association" "myrta9" {
+  subnet_id      = aws_subnet.mysubnet9_b.id
+  route_table_id = aws_route_table.myrt9.id
 }
-resource "aws_security_group" "proj-sg" {
-  name        = "proj-sg"
-  description = "Enable web traffic for the project"
-  vpc_id      = aws_vpc.proj-vpc.id
+
+# Security Groups
+
+resource "aws_security_group" "mysg9" {
+  name        = "mysg9"
+  description = "Allow inbound traffic"
+  vpc_id      = aws_vpc.myvpc9.id
 
   ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "HTTPS traffic"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "HTTP traffic"
-    from_port   = 0
-    to_port     = 65000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "Allow port 80 inbound"
+    description = "HTTP"
     from_port   = 80
     to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -88,35 +103,31 @@ resource "aws_security_group" "proj-sg" {
   }
 
   tags = {
-    Name = "proj-sg1"
+    Name = "mysg9"
   }
-}
-resource "aws_network_interface" "proj-ni" {
-  subnet_id       = aws_subnet.proj-subnet.id
-  private_ips     = ["10.0.1.10"]
-  security_groups = [aws_security_group.proj-sg.id]
 }
 
-resource "aws_eip" "proj-eip" {
-  vpc                     = true
-  network_interface       = aws_network_interface.proj-ni.id
-  associate_with_private_ip = "10.0.1.10"
-}
-resource "aws_instance" "Prod-Server" {
-  ami                    = "ami-0c2af51e265bd5e0e"
+# Create Instance with Elastic IP Allocation
+
+resource "aws_instance" "instance9" {
+  ami                    = "ami-0f58b397bc5c1f2e8"
   instance_type          = "t2.micro"
-  availability_zone      = "ap-south-1b"
+  subnet_id              = aws_subnet.mysubnet9_b.id
+  vpc_security_group_ids = [aws_security_group.mysg9.id]
   key_name               = "pihukey"
-  network_interface {
-    device_index         = 0
-    network_interface_id = aws_network_interface.proj-ni.id
-  }
-  user_data  = <<-EOF
-    #!/bin/bash
-    sudo apt-get update -y
-    EOF
+  associate_public_ip_address = true
+  availability_zone      = "ap-south-1b"  # Specify the availability zone
 
   tags = {
-    Name = "Prod-Server"
+    Name = "Prod_server"
   }
 }
+
+# Allocate Elastic IP
+
+resource "aws_eip" "instance_eip" {
+  instance   = aws_instance.instance9.id
+  vpc        = true
+  depends_on = [aws_instance.instance9]  # Ensure instance is created first
+}
+
