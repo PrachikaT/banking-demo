@@ -1,119 +1,148 @@
+#Initialize Terraform
 terraform {
-  required_version = ">= 0.13.0"
-
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 4.0"
+      version = "~> 4.0"
     }
   }
 }
 
+# Configure the AWS provider
 provider "aws" {
   region = "ap-south-1"
 }
-
-# Create VPC
-resource "aws_vpc" "myvpc9" {
-  cidr_block       = "10.0.0.0/16"
-  instance_tenancy = "default"
-
-  tags = {
-    Name = "myvpc9"
-  }
+# Creating a VPC
+resource "aws_vpc" "proj-vpc" {
+ cidr_block = "10.0.0.0/16"
 }
 
-# Create Subnet 
-resource "aws_subnet" "mysubnet9" {
-  vpc_id     = aws_vpc.myvpc9.id
-  cidr_block = "10.0.1.0/24"
-
-  tags = {
-    Name = "mysubnet9"
-  }
+# Create an Internet Gateway
+resource "aws_internet_gateway" "proj-ig" {
+ vpc_id = aws_vpc.proj-vpc.id
+ tags = {
+ Name = "gateway1"
+ }
 }
 
-# Create Internet Gateway
-resource "aws_internet_gateway" "mygw9" {
-  vpc_id = aws_vpc.myvpc9.id
-
-  tags = {
-    Name = "mygw9"
-  }
+# Setting up the route table
+resource "aws_route_table" "proj-rt" {
+ vpc_id = aws_vpc.proj-vpc.id
+ route {
+ # pointing to the internet
+ cidr_block = "0.0.0.0/0"
+ gateway_id = aws_internet_gateway.proj-ig.id
+ }
+ route {
+ ipv6_cidr_block = "::/0"
+ gateway_id = aws_internet_gateway.proj-ig.id
+ }
+ tags = {
+ Name = "rt1"
+ }
 }
 
-# Create Route Table
-resource "aws_route_table" "myrt9" {
-  vpc_id = aws_vpc.myvpc9.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.mygw9.id
-  }
-
-  tags = {
-    Name = "myrt9"
-  }
+# Setting up the subnet
+resource "aws_subnet" "proj-subnet" {
+ vpc_id = aws_vpc.proj-vpc.id
+ cidr_block = "10.0.1.0/24"
+ availability_zone = "ap-south-1b"
+ tags = {
+ Name = "subnet1"
+ }
 }
 
-# Associate Route Table with Subnet
-resource "aws_route_table_association" "myrta9" {
-  subnet_id      = aws_subnet.mysubnet9.id
-  route_table_id = aws_route_table.myrt9.id
+# Associating the subnet with the route table
+resource "aws_route_table_association" "proj-rt-sub-assoc" {
+subnet_id = aws_subnet.proj-subnet.id
+route_table_id = aws_route_table.proj-rt.id
 }
 
-# Create Security Group
-resource "aws_security_group" "mysg9" {
-  name        = "mysg9"
-  description = "Allow inbound traffic"
-  vpc_id      = aws_vpc.myvpc9.id
-
-  ingress {
-    description = "HTTP"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
+# Creating a Security Group
+resource "aws_security_group" "proj-sg" {
+ name = "proj-sg"
+ description = "Enable web traffic for the project"
+ vpc_id = aws_vpc.proj-vpc.id
+ ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
-
-  tags = {
-    Name = "mysg9"
+ ingress {
+ description = "HTTPS traffic"
+ from_port = 443
+ to_port = 443
+ protocol = "tcp"
+ cidr_blocks = ["0.0.0.0/0"]
+ }
+ ingress {
+ description = "HTTP traffic"
+ from_port = 0
+ to_port = 65000
+ protocol = "tcp"
+ cidr_blocks = ["0.0.0.0/0"]
+ }
+ ingress {
+ description = "Allow port 80 inbound"
+ from_port   = 80
+ to_port     = 80
+ protocol    = "tcp"
+ cidr_blocks = ["0.0.0.0/0"]
   }
+ egress {
+ from_port = 0
+ to_port = 0
+ protocol = "-1"
+ cidr_blocks = ["0.0.0.0/0"]
+ ipv6_cidr_blocks = ["::/0"]
+ }
+ tags = {
+ Name = "proj-sg1"
+ }
 }
 
-# Create Instance
-resource "aws_instance" "instance9" {
-  ami                         = "ami-0c2af51e265bd5e0e"  # Replace with your desired AMI ID
-  instance_type               = "t2.micro"
-  associate_public_ip_address = true
-  subnet_id                   = aws_subnet.mysubnet9.id
-  vpc_security_group_ids      = [aws_security_group.mysg9.id]
-  key_name                    = "pihukey"  # Replace with your existing key pair name
-
-  tags = {
-    Name = "Prod-Server"
-  }
+# Creating a new network interface
+resource "aws_network_interface" "proj-ni" {
+ subnet_id = aws_subnet.proj-subnet.id
+ private_ips = ["10.0.1.10"]
+ security_groups = [aws_security_group.proj-sg.id]
 }
 
-# Allocate Elastic IP
-resource "aws_eip" "lb" {
-  instance = aws_instance.instance9.id  # Corrected instance reference
-  vpc      = true
+# Attaching an elastic IP to the network interface
+resource "aws_eip" "proj-eip" {
+ vpc = true
+ network_interface = aws_network_interface.proj-ni.id
+ associate_with_private_ip = "10.0.1.10"
 }
 
+
+# Creating an ubuntu EC2 instance
+resource "aws_instance" "Prod-Server" {
+ ami = "ami-0ef82eeba2c7a0eeb"
+ instance_type = "t2.micro"
+ availability_zone = "ap-south-1b"
+ key_name = "chefkeypair"
+ network_interface {
+ device_index = 0
+ network_interface_id = aws_network_interface.proj-ni.id
+ }
+ user_data  = <<-EOF
+ #!/bin/bash
+     sudo apt-get update -y
+     sudo apt install docker.io -y
+     sudo systemctl enable docker
+     sudo docker run -itd -p 8085:8081 vikuldocker/insurance-mentor:1
+     sudo docker start $(docker ps -aq)
+ EOF
+ tags = {
+ Name = "Prod-Server"
+ }
+}
