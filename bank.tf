@@ -1,21 +1,10 @@
-#Initialize Terraform
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 4.0"
-    }
-  }
-}
-
-# Configure the AWS provider
 provider "aws" {
-  region = "ap-south-1"
+  region     = "ap-south-1"
+  access_key = "AKIARBF4NB6XHMRJJMQ7"
+  secret_key = "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"
 }
-
 
 # Create VPC
-
 resource "aws_vpc" "myvpc9" {
   cidr_block       = "10.0.0.0/16"
   instance_tenancy = "default"
@@ -25,20 +14,17 @@ resource "aws_vpc" "myvpc9" {
   }
 }
 
-# Create Subnet in ap-south-1b
-
-resource "aws_subnet" "mysubnet9_b" {
-  vpc_id            = aws_vpc.myvpc9.id
-  cidr_block        = "10.0.2.0/24"
-  availability_zone = "ap-south-1b"
+# Create Subnet 
+resource "aws_subnet" "mysubnet9" {
+  vpc_id     = aws_vpc.myvpc9.id
+  cidr_block = "10.0.1.0/24"
 
   tags = {
-    Name = "mysubnet9_b"
+    Name = "mysubnet9"
   }
 }
 
 # Internet Gateway
-
 resource "aws_internet_gateway" "mygw9" {
   vpc_id = aws_vpc.myvpc9.id
 
@@ -48,7 +34,6 @@ resource "aws_internet_gateway" "mygw9" {
 }
 
 # Route Table
-
 resource "aws_route_table" "myrt9" {
   vpc_id = aws_vpc.myvpc9.id
 
@@ -63,14 +48,12 @@ resource "aws_route_table" "myrt9" {
 }
 
 # Route Table Association
-
 resource "aws_route_table_association" "myrta9" {
-  subnet_id      = aws_subnet.mysubnet9_b.id
+  subnet_id      = aws_subnet.mysubnet9.id
   route_table_id = aws_route_table.myrt9.id
 }
 
 # Security Groups
-
 resource "aws_security_group" "mysg9" {
   name        = "mysg9"
   description = "Allow inbound traffic"
@@ -105,27 +88,26 @@ resource "aws_security_group" "mysg9" {
   }
 }
 
-# Create Instance with Elastic IP Allocation
-
-resource "aws_instance" "instance9" {
-  ami                    = "ami-0f58b397bc5c1f2e8"
-  instance_type          = "t2.micro"
-  subnet_id              = aws_subnet.mysubnet9_b.id
-  vpc_security_group_ids = [aws_security_group.mysg9.id]
-  key_name               = "pihukey"
-  associate_public_ip_address = true
-  availability_zone      = "ap-south-1b"  # Specify the availability zone
+# Allocate Elastic IP
+resource "aws_eip" "myeip" {
+  vpc = true
 
   tags = {
-    Name = "Prod_server"
+    Name = "myeip"
   }
 }
 
-# Allocate Elastic IP
+# Create Instance
+resource "aws_instance" "instance9" {
+  ami                          = "ami-0f58b397bc5c1f2e8"
+  instance_type                = "t2.micro"
+  associate_public_ip_address  = true
+  subnet_id                    = aws_subnet.mysubnet9.id
+  vpc_security_group_ids       = [aws_security_group.mysg9.id]
+  key_name                     = "pihukey"
 
-resource "aws_eip" "instance_eip" {
-  instance   = aws_instance.instance9.id
-  vpc        = true
-  depends_on = [aws_instance.instance9]  # Ensure instance is created first
+  tags = {
+    Name = "Prod-Server"
+  }
 }
 
