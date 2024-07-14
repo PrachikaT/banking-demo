@@ -1,7 +1,7 @@
 provider "aws" {
   region     = "ap-south-1"
-  access_key = "AKIARBF4NB6XD6GGUNVF"
-  secret_key = "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"
+  access_key = "############"
+  secret_key = "############"
 }
 
 # Create AWS Instance
