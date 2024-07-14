@@ -1,20 +1,18 @@
-provider "aws" {
-  region     = "ap-south-1"
-  access_key = "############"
-  secret_key = "############"
-}
-
-# Create AWS Instance
-
-resource "aws_instance" "instance1" {
-  ami           = "ami-0c2af51e265bd5e0e"
-  instance_type = "t2.micro"
-  key_name      = "pihukey"
-
-  tags = {
-    Name = "Instance1"
+#Initialize Terraform
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.0"
+    }
   }
 }
+
+# Configure the AWS provider
+provider "aws" {
+  region = "ap-south-1"
+}
+
 
 # Create VPC
 
