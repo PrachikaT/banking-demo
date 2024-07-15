@@ -7,7 +7,6 @@ terraform {
   }
 }
 
-# Configure the AWS provider
 provider "aws" {
   region = "ap-southeast-1"
 }
@@ -15,6 +14,9 @@ provider "aws" {
 # Creating a VPC
 resource "aws_vpc" "proj-vpc" {
   cidr_block = "10.0.0.0/16"
+  tags = {
+    Name = "proj-vpc"
+  }
 }
 
 # Create an Internet Gateway
@@ -28,19 +30,23 @@ resource "aws_internet_gateway" "proj-ig" {
 # Setting up the route table
 resource "aws_route_table" "proj-rt" {
   vpc_id = aws_vpc.proj-vpc.id
+
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.proj-ig.id
   }
+
   route {
     ipv6_cidr_block = "::/0"
     gateway_id = aws_internet_gateway.proj-ig.id
   }
+
   tags = {
     Name = "rt1"
   }
 }
 
+# Setting up the subnet
 resource "aws_subnet" "proj-subnet" {
   vpc_id            = aws_vpc.proj-vpc.id
   cidr_block        = "10.0.1.0/24"
@@ -49,8 +55,6 @@ resource "aws_subnet" "proj-subnet" {
     Name = "subnet1"
   }
 }
-  
-
 
 # Associating the subnet with the route table
 resource "aws_route_table_association" "proj-rt-sub-assoc" {
@@ -106,6 +110,9 @@ resource "aws_network_interface" "proj-ni" {
   subnet_id       = aws_subnet.proj-subnet.id
   private_ips     = ["10.0.1.10"]
   security_groups = [aws_security_group.proj-sg.id]
+  tags = {
+    Name = "proj-ni"
+  }
 }
 
 # Attaching an elastic IP to the network interface
@@ -113,22 +120,28 @@ resource "aws_eip" "proj-eip" {
   vpc                       = true
   network_interface         = aws_network_interface.proj-ni.id
   associate_with_private_ip = "10.0.1.10"
+  tags = {
+    Name = "proj-eip"
+  }
 }
 
-# Creating an ubuntu EC2 instance
+# Creating an Ubuntu EC2 instance
 resource "aws_instance" "Prod-Server" {
   ami               = "ami-0497a974f8d5dcef8"
   instance_type     = "t2.micro"
-  availability_zone = "ap-southeast-1"
+  availability_zone = "ap-southeast-1b"
   key_name          = "bankkey"
+
   network_interface {
     device_index          = 0
     network_interface_id  = aws_network_interface.proj-ni.id
   }
+
   user_data = <<-EOF
     #!/bin/bash
     sudo apt-get update -y
   EOF
+
   tags = {
     Name = "Prod-Server"
   }
