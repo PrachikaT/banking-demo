@@ -1,37 +1,38 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: bankapp-eta-deploy
+  name: banking-a-deploy
   labels:
-    app: bankapp-eta-app
+    app: banking-a-app
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: bankapp-eta-app
+      app: banking-a-app
   template:
     metadata:
       labels:
-        app: bankapp-eta-app
+        app: banking-a-app
     spec:
       containers:
-      - name: bankapp-eta-container
-        image: instantprachi/banking-a:1.0  # Ensure this matches your Docker image
+      - name: banking-a-container
+        image: instantprachi/banking-a
         ports:
         - containerPort: 8082
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: bankapp-eta-np-service
+  name: banking-a-np-service
   labels:
-    app: bankapp-eta-app
+    app: banking-a-app
 spec:
   selector:
-    app: bankapp-eta-app
+    app: banking-a-app
   type: NodePort
   ports:
   - nodePort: 31030  
     port: 8082
     targetPort: 8082
+
 
