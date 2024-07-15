@@ -122,7 +122,7 @@ resource "aws_instance" "Prod-Server" {
   ami               = "ami-0497a974f8d5dcef8"
   instance_type     = "t2.micro"
   availability_zone = "ap-southeast-1"
-  key_name          = "bank-app"
+  key_name          = "bankkey"
   network_interface {
     device_index          = 0
     network_interface_id  = aws_network_interface.proj-ni.id
