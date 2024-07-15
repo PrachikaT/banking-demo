@@ -1,22 +1,36 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: banking-a-deployment
+  name: banking-a-deploy
   labels:
-    app: banking-a
+    app: banking-a-app
 spec:
-  replicas: 3  
+  replicas: 3
   selector:
     matchLabels:
-      app: banking-a
+      app: banking-a-app
   template:
     metadata:
       labels:
-        app: banking-a
+        app: banking-a-app
     spec:
       containers:
-      - name: banking-a
+      - name: banking-a-container
         image: instantprachi/banking-a
         ports:
-        - containerPort: 8080  
-
+        - containerPort: 8082
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: banking-a-np-service
+  labels:
+    app: banking-a-app
+spec:
+  selector:
+    app: banking-a-app
+  type: NodePort
+  ports:
+  - nodePort: 31030  
+    port: 8082
+    targetPort: 8082
